@@ -1,6 +1,7 @@
 package bms.player.beatoraja.ir;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import bms.player.beatoraja.*;
@@ -25,6 +26,10 @@ public class RankingData {
 	 * 選択されている楽曲のローカルスコアでの想定IR順位
 	 */	
 	private int localrank;
+	/**
+	 * 自分のスコア。ない場合はnull
+	 */
+	private IRScoreData playerscore;
 
 	/**
 	 * IR総プレイ数
@@ -70,7 +75,7 @@ public class RankingData {
 		        response = ir[0].connection.getCoursePlayData(null, new IRCourseData((CourseData) song, mainstate.main.getPlayerConfig().getLnmode()));
 	        }
 	        if(response.isSucceeded()) {
-	        	updateScore(response.getData(), mainstate.getScoreDataProperty().getScoreData());
+	        	updateScore(ir[0].player, response.getData(), mainstate.getScoreDataProperty().getScoreData());
 	            Logger.getGlobal().fine("IRからのスコア取得成功 : " + response.getMessage());
 				state = FINISH;
 	        } else {
@@ -83,7 +88,7 @@ public class RankingData {
 
 	}
 	
-	public void updateScore(IRScoreData[] scores, ScoreData localscore) {
+	public void updateScore(IRPlayerData player, IRScoreData[] scores, ScoreData localscore) {
 		if(scores == null) {
 			return;
 		}
@@ -104,9 +109,15 @@ public class RankingData {
         Arrays.fill(lamps, 0);
         irrank = 0;
         localrank = 0;
+        playerscore = null;
         for(int i = 0;i < scores.length;i++) {
-            if(irrank == 0 && scores[i].player.length() == 0) {
+        	if(Objects.equals(player.id, scores[i].id)) {
             	irrank = scorerankings[i];
+            	playerscore = scores[i];
+        	} else if(irrank == 0 && scores[i].player.length() == 0) {
+            	// TODO 旧方式のため後で削除
+            	irrank = scorerankings[i];
+            	playerscore = scores[i];
             }
             if(localscore != null && localrank == 0 && scores[i].getExscore() <=  localscore.getExscore()) {
             	localrank = scorerankings[i];
@@ -169,6 +180,10 @@ public class RankingData {
 			return scores[index];			
 		}
 		return null;
+	}
+	
+	public IRScoreData getPlayerScore() {
+		return playerscore;
 	}
 	
 	/**
